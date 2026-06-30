@@ -243,7 +243,35 @@ const GEO_CACHE = {
   'glasgow uk':                [55.8642,  -4.2518],
   'glasgow scotland':          [55.8642,  -4.2518],
   'palomino colombia':         [11.2500,  -73.5800],
+  // Added from CSV
+  'braunton england':                      [51.1072,  -4.1753],
+  'braunton united kingdom':               [51.1072,  -4.1753],
+  "'t goy nederland":                      [52.0008,   5.2242],
+  "'t goy netherlands":                    [52.0008,   5.2242],
+  'hokksund norway':                       [59.7712,   9.9095],
+  'hokksund/oslo norway':                  [59.7712,   9.9095],
+  'hokksund/oslo united kingdom':          [59.7712,   9.9095],
+  'montréal canada':                       [45.5032,  -73.5698],
+  'montreal canada':                       [45.5032,  -73.5698],
+  'los angeles united states':             [34.0537, -118.2428],
+  'los angeles usa':                       [34.0537, -118.2428],
+  'rome italy':                            [41.8933,  12.4829],
+  'birmingham/north warwickshire uk':      [52.5270,  -1.7866],
+  'birmingham/north warwickshire united kingdom': [52.5270, -1.7866],
 };
+
+const LS_KEY = 'uwc_geo_v1';
+function lsGet(key) {
+  try { const s = localStorage.getItem(LS_KEY); return s ? JSON.parse(s)[key] : null; } catch(e) { return null; }
+}
+function lsSet(key, val) {
+  try {
+    const s = localStorage.getItem(LS_KEY);
+    const obj = s ? JSON.parse(s) : {};
+    obj[key] = val;
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
+  } catch(e) {}
+}
 
 async function geocode(city, country) {
   const clean = s => s.toLowerCase().replace(/\(.*?\)/g, '').split(',')[0].trim();
@@ -252,10 +280,12 @@ async function geocode(city, country) {
   const key = `${c} ${co}`;
   if (GEO_CACHE[key]) return GEO_CACHE[key];
   if (GEO_CACHE[c]) return GEO_CACHE[c];
+  const cached = lsGet(key);
+  if (cached) return cached;
   try {
     const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(c+', '+country)}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } });
     const d = await res.json();
-    if (d[0]) { const r = [parseFloat(d[0].lat), parseFloat(d[0].lon)]; GEO_CACHE[key] = r; return r; }
+    if (d[0]) { const r = [parseFloat(d[0].lat), parseFloat(d[0].lon)]; GEO_CACHE[key] = r; lsSet(key, r); return r; }
   } catch(e) {}
   return null;
 }
@@ -408,7 +438,8 @@ async function loadAndRender() {
   const clean = s => s.toLowerCase().replace(/\(.*?\)/g, '').split(',')[0].trim();
   const isCached = row => {
     const co = clean(row.country).replace(/^uk$/, 'united kingdom').replace(/^england$|^scotland.*/, 'united kingdom');
-    return !!GEO_CACHE[`${clean(row.city)} ${co}`] || !!GEO_CACHE[clean(row.city)];
+    const key = `${clean(row.city)} ${co}`;
+    return !!GEO_CACHE[key] || !!GEO_CACHE[clean(row.city)] || !!lsGet(key);
   };
 
   const cachedRows = rows.filter(isCached);
