@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UWC Atlantic College — Class of 2006 — Where in the World?</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0f172a;
+    color: #f1f5f9;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+    padding: 16px 24px;
+    border-bottom: 1px solid #1e40af33;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    z-index: 1000;
+  }
+  .header-title h1 { font-size: 1.25rem; font-weight: 700; color: #f1f5f9; letter-spacing: -0.01em; }
+  .header-title p { font-size: 0.8rem; color: #94a3b8; margin-top: 2px; }
+  .header-controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .badge {
+    background: #1e40af; color: #bfdbfe; font-size: 0.75rem; font-weight: 600;
+    padding: 4px 10px; border-radius: 20px; white-space: nowrap;
+  }
+  #search {
+    background: #1e293b; border: 1px solid #334155; color: #f1f5f9;
+    padding: 8px 14px; border-radius: 8px; font-size: 0.85rem; width: 200px;
+    outline: none; transition: border-color 0.2s;
+  }
+  #search:focus { border-color: #3b82f6; }
+  #search::placeholder { color: #64748b; }
+  #map { flex: 1; z-index: 1; }
+  .leaflet-popup-content-wrapper {
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5); color: #f1f5f9;
+  }
+  .leaflet-popup-tip { background: #1e293b; }
+  .leaflet-popup-content { margin: 14px 18px; min-width: 180px; }
+  .popup-name { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 4px; }
+  .popup-location { font-size: 0.82rem; color: #94a3b8; }
+  .leaflet-popup-close-button { color: #64748b !important; font-size: 1.1rem !important; top: 8px !important; right: 10px !important; }
+  #sidebar {
+    position: absolute; top: 80px; right: 16px; width: 260px;
+    background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+    z-index: 900; overflow: hidden; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    max-height: calc(100vh - 110px); display: flex; flex-direction: column;
+  }
+  #sidebar-header {
+    padding: 12px 16px; background: #0f172a; border-bottom: 1px solid #334155;
+    font-size: 0.8rem; font-weight: 600; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  #alumni-list { overflow-y: auto; flex: 1; }
+  #alumni-list::-webkit-scrollbar { width: 4px; }
+  #alumni-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+  .alumni-item {
+    padding: 10px 16px; border-bottom: 1px solid #1e3a5f22;
+    cursor: pointer; transition: background 0.15s;
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .alumni-item:hover { background: #0f172a; }
+  .alumni-item:last-child { border-bottom: none; }
+  .alumni-item-name { font-size: 0.85rem; font-weight: 600; color: #e2e8f0; }
+  .alumni-item-loc { font-size: 0.75rem; color: #94a3b8; }
+  footer {
+    background: #0f172a; border-top: 1px solid #1e40af22;
+    padding: 6px 24px; font-size: 0.72rem; color: #94a3b8;
+    text-align: center; z-index: 1000;
+  }
+  footer a { color: #3b82f6; text-decoration: none; }
+  footer a:hover { text-decoration: underline; }
+  #mobile-toggle {
+    display: none;
+    position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%);
+    z-index: 2000; background: #1d4ed8; color: #fff;
+    border: none; border-radius: 24px; padding: 10px 24px;
+    font-size: 0.88rem; font-weight: 600; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+  @media (max-width: 600px) {
+    #search { width: 130px; }
+    #mobile-toggle { display: block; }
+    #sidebar {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 48px;
+      width: 100%; max-height: none; border-radius: 0;
+      z-index: 1500; display: none;
+    }
+    #sidebar.mobile-open { display: flex; }
+    #map { display: block; }
+    #map.mobile-hidden { display: none; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <div class="header-title">
+    <img src="https://www.uwcatlantic.org/_next/static/media/uwc-atlantic-logo-white.e3d0bf94.svg"
+         alt="UWC Atlantic College"
+         style="height:36px; width:auto; margin-bottom:4px; display:block;"
+         onerror="this.style.display='none'">
+    <h1>Class of 2006</h1>
+    <p>Where in the world are we?</p>
+  </div>
+  <div class="header-controls">
+    <input type="text" id="search" placeholder="Search by name or city..." oninput="filterAlumni(this.value)">
+    <a href="https://forms.gle/stR4sxVdZ4ho5b6a8" target="_blank" style="
+      background:#4da9a0; color:#fff; font-size:0.82rem; font-weight:600;
+      padding:8px 14px; border-radius:8px; text-decoration:none; white-space:nowrap;
+      border:1px solid #6dbfb8; transition:background 0.15s;
+      " onmouseover="this.style.background='#3d9089'" onmouseout="this.style.background='#4da9a0'">
+      + Add / update your location
+    </a>
+  </div>
+</header>
+
+<div style="position:relative; flex:1; display:flex; flex-direction:column;">
+  <div id="map"></div>
+  <div id="sidebar">
+    <div id="sidebar-header">
+      Alumni Directory
+      <span id="count-badge" style="float:right;background:#1e3a5f;color:#94a3b8;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:10px;text-transform:none;letter-spacing:0;">44 alumni</span>
+    </div>
+    <div id="sidebar-mobile-controls" style="display:none;padding:10px 12px;gap:8px;flex-direction:column;border-bottom:1px solid #334155;">
+      <input type="text" id="search-mobile" placeholder="Search by name or city..."
+        oninput="filterAlumni(this.value); document.getElementById('search').value = this.value;"
+        style="background:#0f172a;border:1px solid #334155;color:#f1f5f9;padding:8px 12px;border-radius:8px;font-size:0.85rem;width:100%;outline:none;">
+      <a href="https://forms.gle/stR4sxVdZ4ho5b6a8" target="_blank" style="
+        background:#4da9a0;color:#fff;font-size:0.82rem;font-weight:600;
+        padding:9px 14px;border-radius:8px;text-decoration:none;text-align:center;
+        border:1px solid #6dbfb8;display:block;">
+        + Add / update your location
+      </a>
+    </div>
+    <div id="alumni-list"></div>
+  </div>
+</div>
+
+<button id="mobile-toggle" onclick="toggleMobileView()">📋 Show list</button>
+<footer>
+  💙 A tiny passion project by Ara &amp; Jenny &nbsp;|&nbsp; Live data as of <span id="load-time">loading...</span> &nbsp;|&nbsp; Individual update dates shown on each pin
+</footer>
+
+<script>
+// Country code lookup for flag emoji
+function countryFlag(country) {
+  const map = {
+    'tunisia': 'TN', 'malaysia': 'MY', 'norway': 'NO', 'germany': 'DE',
+    'wales': 'GB', 'uk': 'GB', 'united kingdom': 'GB', 'england': 'GB',
+    'scotland': 'GB', 'spain': 'ES', 'belgium': 'BE', 'france': 'FR',
+    'netherlands': 'NL', 'the netherlands': 'NL', 'usa': 'US', 'united states': 'US',
+    'canada': 'CA', 'finland': 'FI', 'guatemala': 'GT', 'portugal': 'PT',
+    'south africa': 'ZA', 'indonesia': 'ID', 'switzerland': 'CH',
+    'australia': 'AU', 'basque country': 'ES', 'jordan': 'JO',
+    'colombia': 'CO', 'mexico': 'MX', 'brazil': 'BR', 'argentina': 'AR',
+    'chile': 'CL', 'peru': 'PE', 'ireland': 'IE', 'italy': 'IT',
+    'sweden': 'SE', 'denmark': 'DK', 'austria': 'AT', 'poland': 'PL',
+    'czech republic': 'CZ', 'greece': 'GR', 'turkey': 'TR', 'india': 'IN',
+    'china': 'CN', 'japan': 'JP', 'south korea': 'KR', 'singapore': 'SG',
+    'thailand': 'TH', 'vietnam': 'VN', 'new zealand': 'NZ', 'kenya': 'KE',
+    'nigeria': 'NG', 'ghana': 'GH', 'egypt': 'EG', 'morocco': 'MA',
+    'united arab emirates': 'AE', 'uae': 'AE', 'saudi arabia': 'SA',
+    'israel': 'IL', 'lebanon': 'LB', 'pakistan': 'PK', 'bangladesh': 'BD',
+  };
+  const key = country.toLowerCase().replace(/,.*$/, '').trim();
+  const code = map[key];
+  if (!code) return '';
+  return code.split('').map(c => String.fromCodePoint(0x1F1E6 + c.charCodeAt(0) - 65)).join('');
+}
+
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw8aiG_olZ1NCL3NuagmGyx-KhKKfDjPaGMrXUjCsNF9M-09b4GSYCh2F7gKf34jiss/exec';
+
+// Geocode cache — covers all known locations so the map loads instantly
+// New entries not in this list will be geocoded live via Nominatim
+const GEO_CACHE = {
+  'tunis tunisia':             [36.8190,  10.1658],
+  'amman jordan':              [31.9539,  35.9106],
+  'butterworth malaysia':      [5.3991,   100.3631],
+  'penang malaysia':           [5.3991,   100.3631],
+  'oslo norway':               [59.9139,  10.7522],
+  'cologne germany':           [50.9333,  6.9500],
+  'cardiff wales':             [51.4816,  -3.1791],
+  'barcelona spain':           [41.3851,  2.1734],
+  'london uk':                 [51.5074,  -0.1278],
+  'london united kingdom':     [51.5074,  -0.1278],
+  'london england':            [51.5074,  -0.1278],
+  'brasschaat belgium':        [51.2993,  4.4931],
+  'manchester uk':             [53.4808,  -2.2426],
+  'manchester united kingdom': [53.4808,  -2.2426],
+  'birmingham uk':             [52.4862,  -1.8904],
+  'birmingham united kingdom': [52.4862,  -1.8904],
+  'berlin germany':            [52.5200,  13.4050],
+  'boston united states':      [42.3601,  -71.0589],
+  'boston usa':                [42.3601,  -71.0589],
+  'brussels belgium':          [50.8503,  4.3517],
+  'hakadal norway':            [60.0769,  10.8356],
+  'kuala lumpur malaysia':     [3.1390,   101.6869],
+  'solund norway':             [61.0572,  4.8308],
+  'vancouver canada':          [49.2827,  -123.1207],
+  'guatemala city guatemala':  [14.6349,  -90.5069],
+  'amsterdam netherlands':     [52.3676,  4.9041],
+  'melbourne australia':       [-37.8136, 144.9631],
+  'lisbon portugal':           [38.7169,  -9.1399],
+  'ramsgate uk':               [51.3360,  1.4160],
+  'ramsgate united kingdom':   [51.3360,  1.4160],
+  'geneva switzerland':        [46.2044,  6.1432],
+  'bali indonesia':            [-8.3405,  115.0920],
+  'johannesburg south africa': [-26.2041, 28.0473],
+  'basque country spain':      [43.3187,  -2.6820],
+  'gautegiz arteaga spain':    [43.3187,  -2.6820],
+  'gijon spain':               [43.5453,  -5.6613],
+  'edinburgh uk':              [55.9533,  -3.1883],
+  'edinburgh scotland':        [55.9533,  -3.1883],
+  'tampere finland':           [61.4978,  23.7610],
+  'glasgow uk':                [55.8642,  -4.2518],
+  'glasgow scotland':          [55.8642,  -4.2518],
+  'palomino colombia':         [11.2500,  -73.5800],
+};
+
+async function geocode(city, country) {
+  const clean = s => s.toLowerCase().replace(/\(.*?\)/g, '').split(',')[0].trim();
+  const c = clean(city);
+  const co = clean(country).replace(/^uk$/, 'united kingdom').replace(/^england$|^scotland.*/, 'united kingdom');
+  const key = `${c} ${co}`;
+  if (GEO_CACHE[key]) return GEO_CACHE[key];
+  if (GEO_CACHE[c]) return GEO_CACHE[c];
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(c+', '+country)}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } });
+    const d = await res.json();
+    if (d[0]) { const r = [parseFloat(d[0].lat), parseFloat(d[0].lon)]; GEO_CACHE[key] = r; return r; }
+  } catch(e) {}
+  return null;
+}
+
+const map = L.map('map', { center: [30, 10], zoom: 2, zoomControl: true, attributionControl: false });
+
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  subdomains: 'abcd', maxZoom: 19
+}).addTo(map);
+
+L.control.attribution({
+  position: 'bottomleft',
+  prefix: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com">CARTO</a>'
+}).addTo(map);
+
+function makeIcon() {
+  return L.divIcon({
+    className: '',
+    html: `<div style="width:28px;height:28px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);
+      background:#1d4ed8;border:2.5px solid #93c5fd;display:flex;align-items:center;
+      justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.35);">
+      <div style="width:9px;height:9px;background:white;border-radius:50%;opacity:0.9;"></div></div>`,
+    iconSize: [28, 28], iconAnchor: [14, 28], popupAnchor: [0, -32],
+  });
+}
+
+let allAlumni = [];
+const markers = [];
+
+function renderMarkers(alumni) {
+  markers.forEach(m => map.removeLayer(m));
+  markers.length = 0;
+  const groups = {};
+  alumni.forEach(a => {
+    if (a.lat == null) return;
+    const key = `${Math.round(a.lat / 0.15) * 0.15},${Math.round(a.lng / 0.15) * 0.15}`;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(a);
+  });
+  Object.values(groups).forEach(group => {
+    const isMulti = group.length > 1;
+    group.forEach((person, idx) => {
+      const spread = isMulti ? (idx - (group.length - 1) / 2) * 0.05 : 0;
+      const marker = L.marker([person.lat + spread, person.lng], { icon: makeIcon() });
+      const updatedLine = person.updated
+        ? `<div style="color:#94a3b8;font-size:0.72rem;margin-top:8px;border-top:1px solid #2d3f55;padding-top:8px;">Updated ${person.updated}</div>`
+        : '';
+      const flag = countryFlag(person.country);
+      marker.bindPopup(`
+        <div class="popup-name">${person.name}</div>
+        <div style="font-size:0.88rem;color:#cbd5e1;margin-top:3px;">${person.city}</div>
+        <div style="font-size:0.76rem;color:#94a3b8;margin-top:2px;">${flag ? flag + ' ' : ''}${person.country}</div>
+        ${updatedLine}
+      `, { maxWidth: 240 });
+      marker.addTo(map);
+      marker._data = person;
+      markers.push(marker);
+    });
+  });
+}
+
+function buildList(data) {
+  const list = document.getElementById('alumni-list');
+  list.innerHTML = '';
+  [...data].sort((a, b) => a.name.localeCompare(b.name)).forEach(person => {
+    const item = document.createElement('div');
+    item.className = 'alumni-item';
+    const f = countryFlag(person.country);
+    item.innerHTML = `<div class="alumni-item-name">${person.name}</div>
+      <div class="alumni-item-loc">${f ? f + ' ' : ''}${person.city}, ${person.country}</div>`;
+    item.addEventListener('click', () => {
+      const m = markers.find(mk => mk._data.name === person.name);
+      if (m) { map.setView(m.getLatLng(), 7, { animate: true }); setTimeout(() => m.openPopup(), 400); }
+    });
+    list.appendChild(item);
+  });
+  document.getElementById('count-badge').textContent = `${data.length} alumni`;
+}
+
+function filterAlumni(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) { markers.forEach(m => map.addLayer(m)); buildList(allAlumni); return; }
+  const matched = [];
+  markers.forEach(m => {
+    const p = m._data;
+    const hit = p.name.toLowerCase().includes(q) || p.city.toLowerCase().includes(q) || p.country.toLowerCase().includes(q);
+    hit ? map.addLayer(m) : map.removeLayer(m);
+    if (hit) matched.push(p);
+  });
+  buildList(matched);
+  if (matched.length > 0 && matched.length < allAlumni.length) {
+    map.fitBounds(L.featureGroup(markers.filter(m => matched.includes(m._data))).getBounds().pad(0.5), { animate: true });
+  }
+}
+
+function setStatus(msg) {
+  let el = document.getElementById('status-msg');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'status-msg';
+    el.style.cssText = 'position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:#1e293b;color:#94a3b8;font-size:0.78rem;padding:6px 16px;border-radius:8px;z-index:2000;border:1px solid #334155;pointer-events:none;white-space:nowrap;';
+    document.querySelector('div[style*="position:relative"]').appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+function setLoadTime() {
+  const now = new Date();
+  document.getElementById('load-time').textContent = now.toLocaleString('en-GB', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+async function loadAndRender() {
+  setStatus('Loading alumni data...');
+  let rows;
+  try {
+    const res = await fetch(APPS_SCRIPT_URL);
+    if (!res.ok) throw new Error();
+    rows = await res.json();
+    setLoadTime();
+  } catch(e) {
+    setLoadTime();
+    setStatus('Could not load live data');
+    return;
+  }
+  setStatus(`Placing ${rows.length} alumni on the map...`);
+  // Split into cached (instant, parallel) and unknown (sequential, rate-limited)
+  const clean = s => s.toLowerCase().replace(/\(.*?\)/g, '').split(',')[0].trim();
+  const isCached = row => {
+    const co = clean(row.country).replace(/^uk$/, 'united kingdom').replace(/^england$|^scotland.*/, 'united kingdom');
+    return !!GEO_CACHE[`${clean(row.city)} ${co}`] || !!GEO_CACHE[clean(row.city)];
+  };
+
+  const cachedRows = rows.filter(isCached);
+  const unknownRows = rows.filter(r => !isCached(r));
+
+  // Resolve all cached rows instantly in parallel
+  const cachedResults = await Promise.all(cachedRows.map(async row => {
+    const coords = await geocode(row.city, row.country);
+    return { ...row, lat: coords ? coords[0] : null, lng: coords ? coords[1] : null };
+  }));
+
+  // Render cached rows immediately — don't wait for unknowns
+  allAlumni = cachedResults;
+  renderMarkers(allAlumni);
+  buildList(allAlumni);
+  setStatus(unknownRows.length ? `Placing ${unknownRows.length} new location${unknownRows.length > 1 ? 's' : ''}...` : '');
+
+  // Then resolve any unknown rows sequentially (Nominatim rate limit)
+  for (const row of unknownRows) {
+    const coords = await geocode(row.city, row.country);
+    allAlumni.push({ ...row, lat: coords ? coords[0] : null, lng: coords ? coords[1] : null });
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  if (unknownRows.length) {
+    renderMarkers(allAlumni);
+    buildList(allAlumni);
+  }
+
+  const geocoded = allAlumni; // keep reference for compat
+  setStatus('');
+}
+
+// Mobile map/list toggle
+let mobileShowingList = false;
+function toggleMobileView() {
+  mobileShowingList = !mobileShowingList;
+  const sidebar = document.getElementById('sidebar');
+  const mapEl = document.getElementById('map');
+  const btn = document.getElementById('mobile-toggle');
+  const mobileControls = document.getElementById('sidebar-mobile-controls');
+  sidebar.classList.toggle('mobile-open', mobileShowingList);
+  mapEl.classList.toggle('mobile-hidden', mobileShowingList);
+  btn.textContent = mobileShowingList ? '🗺️ Show map' : '📋 Show list';
+  mobileControls.style.display = mobileShowingList ? 'flex' : 'none';
+  if (mobileShowingList) document.getElementById('search-mobile').focus();
+}
+
+loadAndRender();
+</script>
+</body>
+</html>
