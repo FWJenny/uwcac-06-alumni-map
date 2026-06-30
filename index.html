@@ -392,7 +392,11 @@ async function loadAndRender() {
   try {
     const res = await fetch(APPS_SCRIPT_URL);
     if (!res.ok) throw new Error();
-    rows = await res.json();
+    const raw = await res.json();
+    // Keep only the last submission per name (case-insensitive) so re-submissions show the latest location
+    const seen = new Map();
+    raw.forEach(r => seen.set(r.name.toLowerCase().trim(), r));
+    rows = Array.from(seen.values());
     setLoadTime();
   } catch(e) {
     setLoadTime();
