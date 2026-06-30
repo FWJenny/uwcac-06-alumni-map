@@ -260,7 +260,7 @@ async function geocode(city, country) {
   return null;
 }
 
-const map = L.map('map', { center: [30, 10], zoom: 2, minZoom: 2, zoomControl: true, attributionControl: false, tap: true, tapTolerance: 15 });
+const map = L.map('map', { center: [30, 10], zoom: 2, minZoom: 2, maxZoom: 11, zoomControl: true, attributionControl: false, tap: true, tapTolerance: 15 });
 
 L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}{r}.png', {
   subdomains: 'abcd', maxZoom: 19
@@ -317,8 +317,8 @@ function renderMarkers(alumni) {
       <div class="popup-name">${person.name}</div>
       <div style="font-size:0.88rem;color:#cbd5e1;margin-top:3px;">${person.city}</div>
       <div style="font-size:0.76rem;color:#94a3b8;margin-top:2px;">${flag ? flag + ' ' : ''}${person.country}</div>
-      <div style="font-size:0.72rem;color:#64748b;margin-top:6px;font-style:italic;">Not exact address</div>
       ${updatedLine}
+      <div style="font-size:0.72rem;color:#64748b;margin-top:6px;font-style:italic;">Not exact address</div>
     `, { maxWidth: 240 });
     marker._data = person;
     markers.push(marker);
