@@ -11,15 +11,24 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
+  html {
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+  body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: #0f172a;
     color: #f1f5f9;
-    height: 100%;
+    min-height: 100%;
+    min-height: -webkit-fill-available;
     height: 100dvh;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    left: 0;
   }
   header {
     background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
@@ -107,6 +116,9 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.5) !important;
   }
   @media (max-width: 600px) {
+    header { padding: 10px 14px; gap: 8px; }
+    .header-title img, .header-title p { display: none !important; }
+    .header-title h1 { font-size: 1rem; }
     #search { width: 130px; }
     #mobile-toggle { display: block; }
     #sidebar {
